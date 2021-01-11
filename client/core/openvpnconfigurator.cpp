@@ -72,15 +72,14 @@ ErrorCode OpenVpnConfigurator::initPKI(const QString &path)
 
     p.setWorkingDirectory(path);
 
-    //    QObject::connect(&p, &QProcess::channelReadyRead, [&](){
-    //        qDebug().noquote() << p.readAll();
-    //    });
-
     p.start();
     p.waitForFinished();
 
     if (p.exitCode() == 0) return ErrorCode::NoError;
-    else return ErrorCode::EasyRsaError;
+    else {
+        qCritical().noquote() << p.readAll();
+        return ErrorCode::EasyRsaError;
+    }
 }
 
 ErrorCode OpenVpnConfigurator::genReq(const QString &path, const QString &clientId)
@@ -102,9 +101,11 @@ ErrorCode OpenVpnConfigurator::genReq(const QString &path, const QString &client
 
     p.setWorkingDirectory(path);
 
+    QStringList output;
+
     QObject::connect(&p, &QProcess::channelReadyRead, [&](){
         QString data = p.readAll();
-        //qDebug().noquote() << data;
+        output << data;
 
         if (data.contains("Common Name (eg: your user, host, or server name)")) {
             p.write("\n");
@@ -115,7 +116,10 @@ ErrorCode OpenVpnConfigurator::genReq(const QString &path, const QString &client
     p.waitForFinished();
 
     if (p.exitCode() == 0) return ErrorCode::NoError;
-    else return ErrorCode::EasyRsaError;
+    else {
+        qCritical().noquote() << output.join("\n");
+        return ErrorCode::EasyRsaError;
+    }
 }
 
 
